@@ -31,16 +31,15 @@ def search_flickr(additional_params):
 
     baseurl = "https://api.flickr.com/services/rest/"
     params_diction = {
-        "method": "flickr.photos.search",
         "format": "json",
         "api_key": FLICKR_API_KEY,
-        "tags": tags,
-        "per_page": 10,
         "nojsoncallback": 1
     }
 
     for key, value in additional_params.items():
         params_diction[key] = value
+
+    # params_diction.update(additional_params)
 
     unique_ident = params_unique_combination(baseurl,params_diction)
     if unique_ident in CACHE_DICTION:
@@ -56,23 +55,38 @@ def search_flickr(additional_params):
 
 class Photo:
     def __init__(self, photo_dict):
-        self.title = photo_dict['title']
+        self.title = photo_dict['title']['_content']
         self.id = photo_dict['id']
-        self.owner = photo_dict['owner']
+        self.owner = photo_dict['owner']['nsid']
+        self.owner_username = photo_dict['owner']['username']
 
     def __str__(self):
-        return '{0} by {1}'.format(self.title, self.owner)
+        return '{0} by {1}'.format(self.title, self.owner_username)
 
 
 CACHE_DICTION = load_cache_json()
 if DEBUG:
     print(CACHE_DICTION)
 
-results = search_flickr_by_tags('sunset summer')
+# results = search_flickr_by_tags('sunset summer')
+
+results = search_flickr({
+    "method": "flickr.photos.search",
+    "tags": 'sunset summer',
+    "per_page": 10,
+})
+
+
 
 photos_list = []
 for r in results['photos']['photo']:
-    photos_list.append(Photo(r))
+    photo_id = r['id']
+    photo_result = search_flickr({
+        "method": "flickr.photos.getInfo",
+        "photo_id": photo_id,
+    })
+    # print(photo_result)
+    photos_list.append(Photo(photo_result['photo']))
 
 print()
 print("= compare these outputs = >> ")
